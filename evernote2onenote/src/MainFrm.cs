@@ -686,11 +686,9 @@ namespace Evernote2Onenote
                             {
                                 var pageId = string.Empty;
 
-                                // Place the note in one section: use the first tag if available, otherwise "not specified".
+                                // Place the note in one section named after the Evernote notebook.
                                 // All tags are preserved as a "Tags:" line in the note body.
-                                var sectionName = (note.Tags.Count > 0 && !_useUnfiledSection)
-                                    ? note.Tags[0]
-                                    : "not specified";
+                                var sectionName = _enNotebookName.Length > 0 ? _enNotebookName : "not specified";
                                 var sectionId = _useUnfiledSection ? _newnbId : GetSection(sectionName);
                                 _onApp.CreateNewPage(sectionId, out pageId, OneNote.NewPageStyle.npsBlankPageWithTitle);
                                 var outlineId = new Random().Next();
