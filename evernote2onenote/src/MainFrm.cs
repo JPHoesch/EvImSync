@@ -686,38 +686,23 @@ namespace Evernote2Onenote
                             {
                                 var pageId = string.Empty;
 
-                                // Get the hierarchy for all the notebooks
-                                if ((note.Tags.Count > 0) && (!_useUnfiledSection))
-                                {
-                                    foreach (var tag in note.Tags)
-                                    {
-                                        var sectionId = GetSection(tag);
-                                        _onApp.CreateNewPage(sectionId, out pageId, OneNote.NewPageStyle.npsBlankPageWithTitle);
-                                        //_onApp.GetPageContent(pageId, out _);
-                                        //OneNote uses HTML for the xml string to pass to the UpdatePageContent, so use the
-                                        //Outlook HTMLBody property.  It coerces rtf and plain text to HTML.
-                                        var outlineId = new Random().Next();
-                                        //string outlineContent = string.Format(m_xmlNewOutlineContent, emailBody, outlineID, m_outlineIDMetaName);
-                                        var xmlSource = string.Format(XmlSourceUrl, note.SourceUrl);
-                                        var outlineContent = string.Format(_xmlNewOutlineContent, emailBody, outlineId, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), note.SourceUrl.Length > 0 ? xmlSource : "");
-                                        var xml = string.Format(XmlNewOutline, outlineContent, pageId, Xmlns, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), xmlAttachments, note.Date.ToString("yyyy'-'MM'-'ddTHH':'mm':'ss'Z'"));
-                                        _onApp.UpdatePageContent(xml, DateTime.MinValue, OneNote.XMLSchema.xs2013, true);
-                                    }
-                                }
-                                else
-                                {
-                                    var sectionId = _useUnfiledSection ? _newnbId : GetSection("not specified");
-                                    _onApp.CreateNewPage(sectionId, out pageId, OneNote.NewPageStyle.npsBlankPageWithTitle);
-                                    //_onApp.GetPageContent(pageId, out _);
-                                    //OneNote uses HTML for the xml string to pass to the UpdatePageContent, so use the
-                                    //Outlook HTMLBody property.  It coerces rtf and plain text to HTML.
-                                    var outlineId = new Random().Next();
-                                    //string outlineContent = string.Format(m_xmlNewOutlineContent, emailBody, outlineID, m_outlineIDMetaName);
-                                    var xmlSource = string.Format(XmlSourceUrl, note.SourceUrl);
-                                    var outlineContent = string.Format(_xmlNewOutlineContent, emailBody, outlineId, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), note.SourceUrl.Length > 0 ? xmlSource : "");
-                                    var xml = string.Format(XmlNewOutline, outlineContent, pageId, Xmlns, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), xmlAttachments, note.Date.ToString("yyyy'-'MM'-'ddTHH':'mm':'ss'Z'"));
-                                    _onApp.UpdatePageContent(xml, DateTime.MinValue, OneNote.XMLSchema.xs2013, true);
-                                }
+                                // Place the note in one section: use the first tag if available, otherwise "not specified".
+                                // All tags are preserved as a "Tags:" line in the note body.
+                                var sectionName = (note.Tags.Count > 0 && !_useUnfiledSection)
+                                    ? note.Tags[0]
+                                    : "not specified";
+                                var sectionId = _useUnfiledSection ? _newnbId : GetSection(sectionName);
+                                _onApp.CreateNewPage(sectionId, out pageId, OneNote.NewPageStyle.npsBlankPageWithTitle);
+                                var outlineId = new Random().Next();
+                                var xmlSource = string.Format(XmlSourceUrl, note.SourceUrl);
+                                var xmlTagsLine = note.Tags.Count > 0
+                                    ? string.Format("<one:OE alignment=\"left\" quickStyleIndex=\"2\"><one:T><![CDATA[Tags: {0}]]></one:T></one:OE>",
+                                        string.Join(", ", note.Tags))
+                                    : "";
+                                var extraContent = (note.SourceUrl.Length > 0 ? xmlSource : "") + xmlTagsLine;
+                                var outlineContent = string.Format(_xmlNewOutlineContent, emailBody, outlineId, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), extraContent);
+                                var xml = string.Format(XmlNewOutline, outlineContent, pageId, Xmlns, System.Security.SecurityElement.Escape(note.Title).Replace("&apos;", "'"), xmlAttachments, note.Date.ToString("yyyy'-'MM'-'ddTHH':'mm':'ss'Z'"));
+                                _onApp.UpdatePageContent(xml, DateTime.MinValue, OneNote.XMLSchema.xs2013, true);
                                 _onApp.SyncHierarchy(pageId);
                             }
                             catch (Exception ex)
